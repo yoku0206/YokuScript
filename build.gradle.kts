@@ -1,14 +1,20 @@
+import org.jetbrains.kotlin.gradle.plugin.KotlinPluginWrapper
+
 plugins {
     idea
     java
-    kotlin("jvm") version "1.7.0"
     id("com.github.johnrengelman.shadow") version "7.1.2"
+    kotlin("jvm") version "1.7.0"
 }
 
 group = "me.yoku"
 version = properties["version"] as String
 
 val mcVersion = "1.19"
+
+allprojects {
+    apply<KotlinPluginWrapper>()
+}
 
 repositories {
     mavenCentral()
@@ -19,18 +25,20 @@ repositories {
 
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.19.2-R0.1-SNAPSHOT")
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.0")
-    compileOnly("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.7.0")
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.0")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
+//    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.0")
+//    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
 
-    shadow("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
-    shadow("org.jetbrains.kotlin:kotlin-stdlib:1.7.0")
+    shadow(kotlin("stdlib"))
+    shadow(kotlin("reflect"))
 
     implementation("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.7.0")
+
+    shadow ("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
+    shadow ("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
+    shadow ("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.7.0")
 
     runtimeOnly("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
     runtimeOnly("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
@@ -61,10 +69,10 @@ kotlin {
 
 tasks {
 
-//    wrapper {
-//        gradleVersion = "7.4.1"
-//        distributionType = Wrapper.DistributionType.ALL
-//    }
+    wrapper {
+        gradleVersion = "7.4.1"
+        distributionType = Wrapper.DistributionType.ALL
+    }
 
     compileKotlin {
         kotlinOptions.jvmTarget = "11"
@@ -86,8 +94,19 @@ tasks {
     }
 
     shadowJar {
-        minimize()
+        dependsOn(*subprojects.map { it.tasks.jar.get() }.toTypedArray())
+
+        configurations = listOf(project.configurations.shadow.get())
+
+//        minimize()
         archiveBaseName.set(project.name)
+        archiveClassifier.set("")
+        archiveVersion.set("")
+    }
+
+    jar {
+        enabled = false
+        dependsOn("shadowJar")
     }
 
     register("fatJar", Jar::class.java) {
