@@ -4,5 +4,3 @@ main: me.yoku.yokuscript.YokuScript
 api-version: 1.19
 author: [ Yoku ]
 description: Test
-depend:
-    - kotlin-stdlib

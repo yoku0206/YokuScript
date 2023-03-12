@@ -1,20 +1,17 @@
-import org.jetbrains.kotlin.gradle.plugin.KotlinPluginWrapper
+import dev.s7a.gradle.minecraft.server.tasks.LaunchMinecraftServerTask
 
 plugins {
     idea
     java
+    kotlin("jvm") version "1.8.0"
     id("com.github.johnrengelman.shadow") version "7.1.2"
-    kotlin("jvm") version "1.7.0"
+    id("dev.s7a.gradle.minecraft.server") version "2.1.0"
 }
 
 group = "me.yoku"
 version = properties["version"] as String
 
 val mcVersion = "1.19"
-
-allprojects {
-    apply<KotlinPluginWrapper>()
-}
 
 repositories {
     mavenCentral()
@@ -26,56 +23,37 @@ repositories {
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.19.2-R0.1-SNAPSHOT")
 
-//    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.7.0")
-//    implementation("org.jetbrains.kotlin:kotlin-reflect:1.7.0")
+    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("reflect"))
 
-    shadow(kotlin("stdlib"))
-    shadow(kotlin("reflect"))
+    implementation("org.jetbrains.kotlin:kotlin-main-kts:1.8.0")
+    implementation("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.8.0")
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.8.0")
+    implementation("org.jetbrains.kotlin:kotlin-script-util:1.8.0")
 
-    implementation("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
-    implementation("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
-    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.7.0")
 
-    shadow ("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
-    shadow ("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
-    shadow ("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.7.0")
-
-    runtimeOnly("org.jetbrains.kotlin:kotlin-main-kts:1.7.0")
-    runtimeOnly("org.jetbrains.kotlin:kotlin-scripting-jsr223:1.7.0")
-
-//    implementation("org.jetbrains.kotlin:kotlin-scripting-common")
-//    implementation("org.jetbrains.kotlin:kotlin-scripting-jvm")
-//    implementation("org.jetbrains.kotlin:kotlin-scripting-dependencies")
-//    implementation("org.jetbrains.kotlin:kotlin-scripting-dependencies-maven")
-//    // coroutines dependency is required for this particular definition
-//    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-//    implementation("org.jetbrains.kotlin:kotlin-script-util:1.8.0")
-
-}
-
-configure<SourceSetContainer> {
-    named("main") {
-        java.srcDir("src/main/java")
-    }
 }
 
 java {
-
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
 }
 
 kotlin {
-
+    jvmToolchain(17)
 }
 
 tasks {
 
-    wrapper {
-        gradleVersion = "7.4.1"
-        distributionType = Wrapper.DistributionType.ALL
+    compileKotlin {
+        kotlinOptions.jvmTarget = "17"
     }
 
-    compileKotlin {
-        kotlinOptions.jvmTarget = "11"
+    jar {
+
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     }
 
     processResources {
@@ -94,37 +72,37 @@ tasks {
     }
 
     shadowJar {
-        dependsOn(*subprojects.map { it.tasks.jar.get() }.toTypedArray())
 
-        configurations = listOf(project.configurations.shadow.get())
-
-//        minimize()
-        archiveBaseName.set(project.name)
+        archiveBaseName.set("${project.name}-${project.version}")
         archiveClassifier.set("")
         archiveVersion.set("")
-    }
 
-    jar {
-        enabled = false
-        dependsOn("shadowJar")
-    }
+//        minimize()
 
-    register("fatJar", Jar::class.java) {
-        archiveClassifier.set("all")
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-        manifest {
-            attributes("Main-Class" to "me.yoku.yokuscript.YokuScript")
-        }
-        from(configurations.runtimeClasspath.get()
-            .onEach { println("add from dependencies: ${it.name}") }
-            .map { if (it.isDirectory) it else zipTree(it) })
-        val sourcesMain = sourceSets.main.get()
-        sourcesMain.allSource.forEach { println("add from sources: ${it.name}") }
-        from(sourcesMain.output)
     }
 
     build {
+
         dependsOn(shadowJar)
-        dependsOn("fatJar")
+
     }
+
+    register<LaunchMinecraftServerTask>("LaunchServer") {
+
+        jarUrl.set(LaunchMinecraftServerTask.JarUrl.Paper("1.19.3"))
+        agreeEula.set(true)
+
+        dependsOn(shadowJar)
+
+        doFirst {
+
+            copy {
+                from(buildDir.resolve("libs/${project.name}-${project.version}.jar"))
+                into(buildDir.resolve("MinecraftServer/plugins"))
+            }
+
+        }
+
+    }
+
 }

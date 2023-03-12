@@ -1,10 +1,6 @@
 package me.yoku.yokuscript
 
 import org.bukkit.plugin.java.JavaPlugin
-import org.jetbrains.kotlin.mainKts.jsr223.KotlinJsr223MainKtsScriptEngineFactory
-import java.io.File
-import javax.script.ScriptEngineManager
-import kotlin.script.experimental.jsr223.KotlinJsr223DefaultScriptEngineFactory
 
 class YokuScript: JavaPlugin() {
 
